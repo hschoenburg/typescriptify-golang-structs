@@ -95,6 +95,10 @@ func (t *TypeScriptify) Add(obj interface{}) {
 	t.AddType(reflect.TypeOf(obj))
 }
 
+func (t *TypeScriptify) SetCreateInterface(s bool) {
+	t.CreateInterface = s
+}
+
 func (t *TypeScriptify) AddType(typeOf reflect.Type) {
 	t.golangTypes = append(t.golangTypes, typeOf)
 }
