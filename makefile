@@ -1,5 +1,5 @@
 build:
-	go build -i -v -o /dev/null ./...
+	go build -i -v 
 install:
 	go install ./...
 test:

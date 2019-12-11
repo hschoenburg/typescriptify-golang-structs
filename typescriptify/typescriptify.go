@@ -39,8 +39,17 @@ func New() *TypeScriptify {
 
 	types := make(map[reflect.Kind]string)
 
-	types[reflect.Bool] = "boolean"
-	types[reflect.Interface] = "any"
+	/*
+		here is the map for ooveriding Type to specific value
+		make this extensible?
+		accept a map of map[reflect.Kind][string
+		types[reflect.Bool] = "boolean"
+		types[reflect.Interface] = "any"
+		or something more specific that can be used for tyape aliasing?
+
+		types = append(types, CustomTypeAlases
+		types[sdk.AccAddress] = "Bech33Addr"
+	*/
 
 	types[reflect.Int] = "number"
 	types[reflect.Int8] = "number"
@@ -64,6 +73,10 @@ func New() *TypeScriptify {
 
 	return result
 }
+
+/*
+recursive function for flattening structs into flat array of structFields
+*/
 
 func deepFields(typeOf reflect.Type) []reflect.StructField {
 	fields := make([]reflect.StructField, 0)
@@ -91,6 +104,9 @@ func deepFields(typeOf reflect.Type) []reflect.StructField {
 	return fields
 }
 
+/*
+inserts type into t.golangTypes
+*/
 func (t *TypeScriptify) Add(obj interface{}) {
 	t.AddType(reflect.TypeOf(obj))
 }
@@ -99,6 +115,7 @@ func (t *TypeScriptify) SetCreateInterface(s bool) {
 	t.CreateInterface = s
 }
 
+//Adds type to internal arrray ofn reflect.Types
 func (t *TypeScriptify) AddType(typeOf reflect.Type) {
 	t.golangTypes = append(t.golangTypes, typeOf)
 }
@@ -218,6 +235,7 @@ func (t *TypeScriptify) convertType(typeOf reflect.Type, customCode map[string]s
 
 	entityName := t.Prefix + typeOf.Name() + t.Suffix
 	result := ""
+	// starting to build string for interface here
 	if t.CreateInterface {
 		result += fmt.Sprintf("interface %s {\n", entityName)
 	} else {
@@ -226,6 +244,8 @@ func (t *TypeScriptify) convertType(typeOf reflect.Type, customCode map[string]s
 	if !t.DontExport {
 		result = "export " + result
 	}
+
+	// instantiate builder with types array here
 	builder := typeScriptClassBuilder{
 		types:  t.types,
 		indent: t.Indent,
@@ -233,11 +253,14 @@ func (t *TypeScriptify) convertType(typeOf reflect.Type, customCode map[string]s
 		suffix: t.Suffix,
 	}
 
+	//flatten structs into one level array of structFields
 	fields := deepFields(typeOf)
+	// then iterate over fields
 	for _, field := range fields {
 		if field.Type.Kind() == reflect.Ptr {
 			field.Type = field.Type.Elem()
 		}
+		// structFields come with some handy functions
 		jsonTag := field.Tag.Get("json")
 		jsonFieldName := ""
 		if len(jsonTag) > 0 {
@@ -249,6 +272,8 @@ func (t *TypeScriptify) convertType(typeOf reflect.Type, customCode map[string]s
 				if t == "" {
 					break
 				}
+				// omit empty tells Go to omit the field rather than give the fefault zero value if this field is empty
+				// the question mark is Typescript for an optional field
 				if t == "omitempty" {
 					jsonFieldName = fmt.Sprintf("%s?", jsonFieldName)
 				}
@@ -257,6 +282,9 @@ func (t *TypeScriptify) convertType(typeOf reflect.Type, customCode map[string]s
 		if len(jsonFieldName) > 0 && jsonFieldName != "-" {
 			var err error
 			customTransformation := field.Tag.Get(tsTransformTag)
+
+			// what is the tsType field?
+			// struct field tag to provide custom typescript type
 			customTSType := field.Tag.Get(tsType)
 			if customTransformation != "" {
 				err = builder.AddSimpleField(jsonFieldName, field)
@@ -378,7 +406,7 @@ func (t *typeScriptClassBuilder) AddSimpleField(fieldName string, field reflect.
 		return nil
 	}
 
-	return errors.New("Cannot find type for " + fieldType + ", fideld: " + fieldName)
+	return fmt.Errorf("FieldName : %s Cannot find typescript: %s 	kind: %s and type: %s and tag	: %s", fieldName, typeScriptType, kind, fieldType, field.Tag)
 }
 
 func (t *typeScriptClassBuilder) AddStructField(fieldName string, field reflect.StructField) {

@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+type Bech32Address string
+
 type Address struct {
 	// Used in html
 	Duration float64 `json:"duration"`
@@ -16,14 +18,6 @@ type Address struct {
 	// Ignored:
 	Text2 string `json:",omitempty"`
 	Text3 string `json:"-"`
-}
-
-type Dummy struct {
-	Something string `json:"something"`
-}
-
-type HasName struct {
-	Name string `json:"name"`
 }
 
 type Person struct {
@@ -35,6 +29,96 @@ type Person struct {
 	Friends   []*Person `json:"friends"`
 	Dummy     Dummy     `json:"a"`
 }
+
+type Dummy struct {
+	Something string `json:"something"`
+}
+
+type HasName struct {
+	Name string `json:"name"`
+}
+type Description string
+
+type Int uint64
+
+type Dec uint64
+
+type AccAddress string
+type ValAddress string
+
+type PubKey string
+
+type Coin struct {
+	amount string
+	denom  string
+}
+
+type Coins []Coin
+
+type Commission struct {
+	Rate          Dec       `json:"rate"`
+	MaxRate       Dec       `json:"max_rate"`
+	MaxChangeRate Dec       `json:"max_change_rate"`
+	UpdateTime    time.Time `json:"update_time"`
+}
+
+type CommissionRates struct {
+	Rate          Dec
+	MaxRate       Dec
+	MaxChangeRate Dec
+}
+
+type MsgCreateValidatorJSON struct {
+	Description       Description     `json:"description" yaml:"description"`
+	Commission        CommissionRates `json:"commission" yaml:"commission"`
+	MinSelfDelegation Int             `json:"min_self_delegation" yaml:"min_self_delegation"`
+	DelegatorAddress  AccAddress      `json:"delegator_address" yaml:"delegator_address"`
+	ValidatorAddress  ValAddress      `json:"validator_address" yaml:"validator_address"` // `44dk.AcAddress is []byte, should mrshall to somehing else like string
+	PubKey            string          `json:"pubkey" yaml:"pubkey"`
+	Value             Coin            `json:"value" yaml:"value"`
+}
+
+type BaseAccount struct {
+	Address       AccAddress `json:"address" yaml:"address"`
+	Coins         Coins      `json:"coins" yaml:"coins"`
+	PubKey        PubKey     `json:"public_key" yaml:"public_key"`
+	AccountNumber uint64     `json:"account_number" yaml:"account_number"`
+	Sequence      uint64     `json:"sequence" yaml:"sequence"`
+}
+
+func TestTypescriptifyWithAliasing(t *testing.T) {
+	converter := New()
+
+	converter.SetCreateInterface(true)
+
+	fmt.Println("\n\n\n\n\n*********************TEting with alias")
+	var num Int = 8
+	converter.AddType(reflect.TypeOf(num))
+	//converter.AddType(reflect.TypeOf(Dec{}))
+	//converter.AddType(reflect.TypeOf(PubKey{}))
+	//converter.AddType(reflect.TypeOf(Coin{}))
+	//:wconverter.AddType(reflect.TypeOf(AccAddress{"hey there"}))
+	//converter.AddType(reflect.TypeOf(ValAddress{}))
+
+	converter.AddType(reflect.TypeOf(BaseAccount{}))
+	//converter.AddType(reflect.TypeOf(MsgCreateValidator{}))
+/*	
+	desiredBaseAccount := `
+			export interface BaseAccount  { address: Bech32Address coins: Coin[];
+			    public_key: PubKey;
+			    account_number: string;
+			    sequence: string;
+			}
+
+			`
+
+	desiredBaseNum := `
+	   export interface Int {
+}`
+}*/
+
+//testConverter(t, converter, desiredBaseAccount)
+//testConverter(t, converter, desiredBaseNum)
 
 func TestTypescriptifyWithTypes(t *testing.T) {
 	converter := New()
@@ -350,6 +434,7 @@ export class Keyboard {
 	testConverter(t, converter, desiredResult)
 }
 
+/*
 func TestAny(t *testing.T) {
 	type Test struct {
 		Any interface{} `json:"field"`
@@ -374,6 +459,7 @@ func TestAny(t *testing.T) {
 }`
 	testConverter(t, converter, desiredResult)
 }
+*/
 
 type NumberTime time.Time
 
